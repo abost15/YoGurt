@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>YoGurt — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+    :root {
+      --bg:       #080d14;
+      --surface:  #0f1623;
+      --card:     #141d2b;
+      --border:   #1e2d42;
+      --border2:  #243347;
+      --text:     #e2eaf4;
+      --muted:    #5a7a9e;
+      --accent:   #3b82f6;
+      --accent2:  #1d4ed8;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --yellow:   #f59e0b;
+    }
+
+    html,body { height:100%; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); }
+
+    /* ── LOGIN GATE ── */
+    #gate {
+      position:fixed; inset:0; z-index:100;
+      background:var(--bg);
+      display:flex; align-items:center; justify-content:center;
+    }
+    #gate.hidden { display:none; }
+
+    .gate-box {
+      width:min(380px,92vw);
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:40px 36px;
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .gate-logo {
+      width:52px; height:52px; border-radius:50%;
+      overflow:hidden; margin-bottom:8px;
+    }
+    .gate-logo img { width:100%; height:100%; object-fit:cover; transform:scale(1.15) translateY(-4%); }
+    .gate-title { font-size:1.4rem; font-weight:700; letter-spacing:-.02em; }
+    .gate-sub { font-size:.82rem; color:var(--muted); margin-bottom:16px; }
+    .gate-label { font-size:.72rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+    .gate-input {
+      width:100%; padding:11px 14px;
+      background:var(--card); border:1px solid var(--border2);
+      border-radius:8px; color:var(--text);
+      font-family:'JetBrains Mono',monospace; font-size:.9rem;
+      letter-spacing:.1em; outline:none;
+      transition:border-color .2s;
+    }
+    .gate-input:focus { border-color:var(--accent); }
+    .gate-btn {
+      margin-top:8px; padding:12px;
+      background:var(--accent); color:#fff;
+      border:none; border-radius:8px;
+      font-family:'Inter',sans-serif; font-weight:600; font-size:.88rem;
+      cursor:pointer; transition:background .2s;
+    }
+    .gate-btn:hover { background:var(--accent2); }
+    .gate-err { font-size:.75rem; color:var(--red); min-height:18px; }
+
+    /* ── MAIN DASHBOARD ── */
+    #app { display:none; flex-direction:column; min-height:100vh; }
+    #app.visible { display:flex; }
+
+    /* top bar */
+    #topbar {
+      height:54px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 28px; background:var(--surface); flex-shrink:0;
+      position:sticky; top:0; z-index:10;
+    }
+    .topbar-left { display:flex; align-items:center; gap:14px; }
+    .topbar-logo { width:32px; height:32px; border-radius:50%; overflow:hidden; }
+    .topbar-logo img { width:100%; height:100%; object-fit:cover; transform:scale(1.15) translateY(-4%); }
+    .topbar-title { font-size:.82rem; font-weight:600; letter-spacing:.04em; color:var(--muted); }
+    .topbar-title span { color:var(--text); }
+    .topbar-right { display:flex; align-items:center; gap:10px; }
+    .top-btn {
+      padding:7px 14px; border-radius:7px; font-size:.75rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border2); font-family:'Inter',sans-serif;
+      transition:background .2s, color .2s;
+    }
+    .top-btn.ghost { background:transparent; color:var(--muted); }
+    .top-btn.ghost:hover { background:var(--card); color:var(--text); }
+    .top-btn.primary { background:var(--accent); color:#fff; border-color:transparent; }
+    .top-btn.primary:hover { background:var(--accent2); }
+
+    /* layout */
+    #layout { display:flex; flex:1; }
+
+    /* sidebar */
+    #sidebar {
+      width:200px; flex-shrink:0;
+      border-right:1px solid var(--border);
+      background:var(--surface);
+      padding:20px 12px;
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .nav-section-label {
+      font-size:.62rem; font-weight:700; letter-spacing:.14em;
+      text-transform:uppercase; color:var(--muted);
+      padding:0 10px; margin:12px 0 4px;
+    }
+    .nav-section-label:first-child { margin-top:0; }
+    .side-btn {
+      display:flex; align-items:center; gap:10px;
+      padding:8px 10px; border-radius:7px;
+      font-size:.82rem; font-weight:500; color:var(--muted);
+      background:none; border:none; cursor:pointer;
+      font-family:'Inter',sans-serif; text-align:left; width:100%;
+      transition:background .15s, color .15s;
+    }
+    .side-btn:hover { background:var(--card); color:var(--text); }
+    .side-btn.active { background:rgba(59,130,246,.12); color:var(--accent); }
+    .side-btn .icon { font-size:1rem; width:20px; text-align:center; }
+    .side-badge {
+      margin-left:auto; font-size:.6rem; font-weight:700;
+      padding:2px 6px; border-radius:4px;
+      background:var(--border); color:var(--muted);
+    }
+    .side-badge.soon { background:rgba(245,158,11,.1); color:var(--yellow); }
+
+    /* main content */
+    #main { flex:1; overflow-y:auto; padding:28px; display:flex; flex-direction:column; gap:24px; }
+
+    /* panels */
+    .panel { display:none; flex-direction:column; gap:20px; }
+    .panel.active { display:flex; }
+
+    .panel-header { display:flex; align-items:center; justify-content:space-between; }
+    .panel-title { font-size:1.1rem; font-weight:700; letter-spacing:-.02em; }
+    .panel-sub { font-size:.78rem; color:var(--muted); margin-top:2px; }
+
+    /* cards */
+    .card {
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:12px;
+      overflow:hidden;
+    }
+    .card-head {
+      padding:14px 18px;
+      border-bottom:1px solid var(--border);
+      font-size:.72rem; font-weight:700; letter-spacing:.1em;
+      text-transform:uppercase; color:var(--muted);
+    }
+
+    /* flavor rows */
+    .f-row {
+      display:flex; align-items:center; gap:14px;
+      padding:13px 18px;
+      border-bottom:1px solid var(--border);
+      transition:background .15s;
+    }
+    .f-row:last-child { border-bottom:none; }
+    .f-row:hover { background:rgba(255,255,255,.02); }
+    .f-emoji { font-size:1.3rem; width:28px; text-align:center; flex-shrink:0; }
+    .f-name { font-size:.88rem; font-weight:600; flex:1; }
+    .f-badge { font-size:.65rem; color:var(--muted); font-weight:500; }
+    .toggle-wrap { display:flex; align-items:center; gap:10px; }
+    .toggle-label { font-size:.72rem; font-weight:600; }
+    .toggle-label.on  { color:var(--green); }
+    .toggle-label.off { color:var(--red); }
+    .toggle {
+      position:relative; width:40px; height:22px;
+      background:var(--border2); border-radius:100px;
+      cursor:pointer; border:none; padding:0;
+      transition:background .25s;
+      flex-shrink:0;
+    }
+    .toggle.on { background:var(--green); }
+    .toggle::after {
+      content:''; position:absolute;
+      top:3px; left:3px;
+      width:16px; height:16px; border-radius:50%;
+      background:#fff;
+      transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+    }
+    .toggle.on::after { transform:translateX(18px); }
+
+    /* time rows */
+    .t-row {
+      display:flex; align-items:center; gap:12px;
+      padding:11px 18px;
+      border-bottom:1px solid var(--border);
+    }
+    .t-row:last-child { border-bottom:none; }
+    .t-day { font-size:.84rem; font-weight:600; min-width:88px; }
+    .t-day.today { color:var(--accent); }
+    .t-input {
+      flex:1; padding:7px 12px;
+      background:var(--surface); border:1px solid var(--border2);
+      border-radius:7px; color:var(--text);
+      font-family:'JetBrains Mono',monospace; font-size:.82rem;
+      outline:none; transition:border-color .2s;
+    }
+    .t-input:focus { border-color:var(--accent); }
+    .t-input:disabled { opacity:.3; cursor:not-allowed; }
+    .t-closed-btn {
+      padding:6px 12px; border-radius:7px; font-size:.72rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border2);
+      background:transparent; color:var(--muted);
+      font-family:'Inter',sans-serif;
+      transition:all .2s;
+    }
+    .t-closed-btn.closed { background:rgba(239,68,68,.1); color:var(--red); border-color:rgba(239,68,68,.3); }
+
+    /* save bar */
+    #save-bar {
+      position:sticky; bottom:0;
+      background:var(--surface); border-top:1px solid var(--border);
+      padding:14px 28px;
+      display:flex; align-items:center; justify-content:space-between;
+      flex-shrink:0;
+    }
+    #save-status { font-size:.78rem; color:var(--muted); }
+    #save-status.saved { color:var(--green); }
+    #save-btn {
+      padding:10px 24px; border-radius:8px;
+      background:var(--accent); color:#fff; border:none;
+      font-family:'Inter',sans-serif; font-weight:600; font-size:.84rem;
+      cursor:pointer; transition:background .2s;
+    }
+    #save-btn:hover { background:var(--accent2); }
+
+    /* stat boxes */
+    .stat-box {
+      flex:1; min-width:160px;
+      background:var(--card); border:1px solid var(--border);
+      border-radius:12px; padding:18px 20px;
+    }
+    .stat-label { font-size:.68rem; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+    .stat-value { font-size:1.6rem; font-weight:700; color:var(--text); line-height:1; }
+    .stat-sub   { font-size:.72rem; color:var(--muted); margin-top:4px; }
+    .stat-box.open  { border-color:rgba(34,197,94,.3); }
+    .stat-box.closed-today { border-color:rgba(239,68,68,.25); }
+
+    /* flavor preview card */
+    #flavor-preview {
+      border-radius:16px; padding:20px 14px; text-align:center;
+      display:flex; flex-direction:column; align-items:center; gap:8px;
+      min-height:180px; transition:background .4s;
+    }
+    .prev-emoji { font-size:2.4rem; }
+    .prev-name  { font-size:.9rem; font-weight:700; }
+    .prev-desc  { font-size:.7rem; line-height:1.5; opacity:.75; }
+    .prev-badge { font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+                  padding:4px 12px; border-radius:100px; background:rgba(255,255,255,.25); }
+
+    /* drawer for editing */
+    .f-drawer {
+      display:none; flex-direction:column; gap:10px;
+      padding:14px 18px; border-top:1px solid var(--border);
+      background:rgba(255,255,255,.02);
+    }
+    .f-drawer.open { display:flex; }
+    .f-drawer label { font-size:.68rem; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; display:block; }
+    .f-drawer input, .f-drawer textarea {
+      width:100%; padding:8px 12px;
+      background:var(--surface); border:1px solid var(--border2);
+      border-radius:7px; color:var(--text);
+      font-family:'Inter',sans-serif; font-size:.82rem; outline:none;
+      transition:border-color .2s;
+    }
+    .f-drawer textarea { min-height:60px; resize:vertical; }
+    .f-drawer input:focus, .f-drawer textarea:focus { border-color:var(--accent); }
+    .f-edit-btn {
+      padding:5px 12px; border-radius:6px; font-size:.7rem; font-weight:600;
+      cursor:pointer; border:1px solid var(--border2);
+      background:transparent; color:var(--muted); font-family:'Inter',sans-serif;
+      transition:background .15s, color .15s;
+    }
+    .f-edit-btn:hover { background:var(--card); color:var(--text); }
+
+    /* logg */
+    .logg-row {
+      display:flex; align-items:flex-start; gap:14px;
+      padding:12px 18px; border-bottom:1px solid var(--border);
+      font-size:.78rem;
+    }
+    .logg-row:last-child { border-bottom:none; }
+    .logg-time { color:var(--muted); flex-shrink:0; font-size:.72rem; min-width:140px; }
+    .logg-msg  { color:var(--text); flex:1; }
+
+    /* ── Motor panel ── */
+    .motor-conn-badge {
+      font-size:.72rem; font-weight:700; padding:5px 14px;
+      border-radius:100px; letter-spacing:.06em;
+    }
+    .motor-conn-badge.online  { background:rgba(34,197,94,.15); color:var(--green); }
+    .motor-conn-badge.offline { background:rgba(239,68,68,.12); color:var(--red); }
+
+    .motor-start-btn {
+      padding:0 36px; min-width:160px; border-radius:12px; font-size:1.1rem;
+      font-weight:700; border:none; cursor:pointer; font-family:'Inter',sans-serif;
+      background:var(--green); color:#fff;
+      transition:background .2s, transform .15s;
+      box-shadow:0 4px 18px rgba(34,197,94,.25);
+    }
+    .motor-start-btn:hover { transform:translateY(-2px); }
+    .motor-start-btn.running { background:var(--red); box-shadow:0 4px 18px rgba(239,68,68,.25); }
+
+    .dir-btn {
+      flex:1; padding:9px 0; border-radius:8px; font-size:.82rem; font-weight:600;
+      border:1px solid var(--border2); background:transparent; color:var(--muted);
+      cursor:pointer; font-family:'Inter',sans-serif; transition:all .2s;
+    }
+    .dir-btn.active { background:var(--accent); color:#fff; border-color:transparent; }
+    .dir-btn:hover:not(.active) { background:var(--card); color:var(--text); }
+
+    .motor-slider {
+      flex:1; accent-color:var(--accent); height:4px; cursor:pointer;
+    }
+
+    /* coming soon panel */
+    .coming-card {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:12px; padding:36px;
+      text-align:center; color:var(--muted);
+    }
+    .coming-icon { font-size:2.4rem; margin-bottom:12px; }
+    .coming-title { font-size:.92rem; font-weight:600; color:var(--text); margin-bottom:6px; }
+    .coming-txt { font-size:.78rem; }
+
+    /* GIF-velger */
+    .gif-card {
+      background:var(--card); border:2px solid var(--border);
+      border-radius:14px; padding:18px 14px;
+      text-align:center; cursor:pointer;
+      transition:border-color .2s, background .2s, transform .15s;
+      user-select:none;
+    }
+    .gif-card:hover { border-color:var(--border2); background:rgba(59,130,246,.05); transform:translateY(-2px); }
+    .gif-card.gif-active { border-color:var(--accent); background:rgba(59,130,246,.1); }
+    .gif-num { font-size:.6rem; font-family:'JetBrains Mono',monospace; color:var(--muted); margin-bottom:8px; }
+    .gif-emoji { font-size:2.2rem; margin-bottom:8px; }
+    .gif-name { font-size:.78rem; font-weight:600; color:var(--text); margin-bottom:10px; }
+    .gif-send {
+      font-size:.68rem; font-weight:700; padding:5px 10px;
+      border-radius:6px; background:var(--border); color:var(--muted);
+      transition:background .2s, color .2s;
+    }
+    .gif-card:hover .gif-send { background:rgba(59,130,246,.2); color:var(--accent); }
+    .gif-send-active { background:rgba(34,197,94,.15) !important; color:var(--green) !important; }
+
+    /* logout confirm */
+    #logout-overlay {
+      display:none; position:fixed; inset:0; z-index:200;
+      background:rgba(0,0,0,.7); backdrop-filter:blur(6px);
+      align-items:center; justify-content:center;
+    }
+    #logout-overlay.open { display:flex; }
+    .logout-box {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:32px; width:min(320px,88vw);
+      text-align:center;
+    }
+    .logout-box h3 { font-size:1rem; font-weight:700; margin-bottom:8px; }
+    .logout-box p { font-size:.8rem; color:var(--muted); margin-bottom:22px; }
+    .logout-btns { display:flex; gap:10px; }
+    .logout-btns button { flex:1; padding:10px; border-radius:8px; font-family:'Inter',sans-serif; font-weight:600; font-size:.82rem; cursor:pointer; transition:background .2s; }
+    .lb-cancel { background:var(--card); border:1px solid var(--border2); color:var(--text); }
+    .lb-cancel:hover { background:var(--border); }
+    .lb-confirm { background:var(--red); border:none; color:#fff; }
+    .lb-confirm:hover { background:#dc2626; }
+  </style>
+</head>
+<body>
+
+<!-- ── LOGIN GATE ── -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo"><img src="IMG_0506.JPEG" alt="YoGurt"/></div>
+    <div class="gate-title">Admin-panel</div>
+    <div class="gate-sub">YoGurt Elevbedrift — kun for administratorer</div>
+    <div class="gate-label">Passord</div>
+    <input class="gate-input" id="pw" type="password" placeholder="••••••••••••" autocomplete="current-password"/>
+    <div class="gate-err" id="pw-err"></div>
+    <button class="gate-btn" id="pw-btn">Logg inn</button>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ── -->
+<div id="app">
+
+  <!-- top bar -->
+  <div id="topbar">
+    <div class="topbar-left">
+      <div class="topbar-logo"><img src="IMG_0506.JPEG" alt=""/></div>
+      <div class="topbar-title"><span>YoGurt</span> — Admin</div>
+    </div>
+    <div class="topbar-right">
+      <a href="index.html" class="top-btn ghost">← Til nettsiden</a>
+      <button class="top-btn ghost" id="logout-btn">Logg ut</button>
+      <button class="top-btn primary" id="save-btn-top">Lagre</button>
+    </div>
+  </div>
+
+  <div id="layout">
+
+    <!-- sidebar -->
+    <aside id="sidebar">
+      <div class="nav-section-label">Oversikt</div>
+      <button class="side-btn active" data-panel="hjem"><span class="icon">🏠</span>Hjem</button>
+
+      <div class="nav-section-label">Salg</div>
+      <button class="side-btn" data-panel="smaker"><span class="icon">🍦</span>Smaker</button>
+      <button class="side-btn" data-panel="tider"><span class="icon">🕐</span>Åpningstider</button>
+
+      <div class="nav-section-label">Maskin</div>
+      <button class="side-btn" data-panel="maskin"><span class="icon">⚙️</span>Maskinstyring</button>
+      <button class="side-btn" data-panel="display"><span class="icon">🖥️</span>Display</button>
+      <button class="side-btn" data-panel="kjøling"><span class="icon">❄️</span>Kjøling<span class="side-badge soon">Snart</span></button>
+
+      <div class="nav-section-label">Historikk</div>
+      <button class="side-btn" data-panel="logg"><span class="icon">📋</span>Logg</button>
+
+      <div class="nav-section-label">Statistikk</div>
+      <button class="side-btn" data-panel="statistikk"><span class="icon">📊</span>Oversikt<span class="side-badge soon">Snart</span></button>
+    </aside>
+
+    <!-- main -->
+    <main id="main">
+
+      <!-- HJEM PANEL -->
+      <div class="panel active" id="panel-hjem">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title" id="dash-date"></div>
+            <div class="panel-sub">Rask oversikt og hurtigtoggler</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="stat-box" id="stat-avail"></div>
+          <div class="stat-box" id="stat-time"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Hurtigtoggle — smaker</div>
+          <div id="quick-flavor-list"></div>
+        </div>
+      </div>
+
+      <!-- SMAKER PANEL -->
+      <div class="panel" id="panel-smaker">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Smaker</div>
+            <div class="panel-sub">Tilgjengelighet, beskrivelse og pris per smak</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:20px;align-items:flex-start;">
+          <div class="card" style="flex:1;min-width:0;">
+            <div class="card-head">Tilgjengelighet og innstillinger</div>
+            <div id="flavor-list"></div>
+          </div>
+          <div id="preview-wrap" style="flex-shrink:0;width:200px;position:sticky;top:74px;">
+            <div class="card-head" style="margin-bottom:10px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">Forhåndsvisning</div>
+            <div id="flavor-preview"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÅPNINGSTIDER PANEL -->
+      <div class="panel" id="panel-tider">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Åpningstider</div>
+            <div class="panel-sub">Sett tidene for hvert salgsdøgn</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">Ukesplan</div>
+          <div id="time-list"></div>
+        </div>
+      </div>
+
+      <!-- MASKIN PANEL -->
+      <div class="panel" id="panel-maskin">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Maskinstyring</div>
+            <div class="panel-sub">Stepper-motor / auger — sanntidskontroll via Firebase</div>
+          </div>
+          <div id="motor-conn" class="motor-conn-badge offline">● Frakoblet</div>
+        </div>
+
+        <!-- START/STOP + retning -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;">
+          <button id="motor-startstop" class="motor-start-btn" onclick="motorStartStop()">▶ START</button>
+          <div class="card" style="flex:1;min-width:160px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;">
+            <div class="stat-label">Retning</div>
+            <div style="display:flex;gap:8px;">
+              <button class="dir-btn active" id="dir-left" onclick="setDirection('left')">← Venstre</button>
+              <button class="dir-btn" id="dir-right" onclick="setDirection('right')">Høyre →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live stats -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap;">
+          <div class="stat-box"><div class="stat-label">Motor RPM</div><div class="stat-value" id="m-rpm">—</div></div>
+          <div class="stat-box"><div class="stat-label">Steg/sek</div><div class="stat-value" id="m-sps">—</div></div>
+          <div class="stat-box"><div class="stat-label">Omdreininger</div><div class="stat-value" id="m-rev">—</div></div>
+          <div class="stat-box"><div class="stat-label">WiFi RSSI</div><div class="stat-value" id="m-rssi">—</div></div>
+        </div>
+
+        <!-- RPM-slider -->
+        <div class="card" style="padding:20px 22px;">
+          <div class="card-head">RPM-kontroll</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:14px;">
+            <input type="range" id="rpm-slider" min="1" max="60" value="13" class="motor-slider" oninput="rpmSliderChange(this.value)"/>
+            <input type="number" id="rpm-num" min="1" max="60" value="13" class="t-input" style="width:72px;" oninput="rpmSliderChange(this.value)"/>
+            <span style="color:var(--muted);font-size:.78rem;">RPM</span>
+          </div>
+        </div>
+
+        <!-- Strøm-slider -->
+        <div class="card" style="padding:20px 22px;">
+          <div class="card-head">Motorstrøm</div>
+          <div style="display:flex;align-items:center;gap:14px;margin-top:14px;">
+            <input type="range" id="cur-slider" min="200" max="1500" step="50" value="800" class="motor-slider" oninput="curSliderChange(this.value)"/>
+            <input type="number" id="cur-num" min="200" max="1500" step="50" value="800" class="t-input" style="width:80px;" oninput="curSliderChange(this.value)"/>
+            <span style="color:var(--muted);font-size:.78rem;">mA</span>
+          </div>
+          <div id="cur-warn" style="display:none;margin-top:8px;font-size:.74rem;color:var(--yellow);">⚠ Over 1200 mA — pass på varme!</div>
+        </div>
+
+        <!-- Kjør N omdreininger -->
+        <div class="card" style="padding:20px 22px;">
+          <div class="card-head">Kjør eksakt antall omdreininger</div>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+            <input type="number" id="rev-num" value="2" min="0.1" step="0.5" class="t-input" style="width:90px;" placeholder="Ant."/>
+            <span style="color:var(--muted);font-size:.78rem;">omdreininger ved</span>
+            <input type="number" id="rev-rpm" value="13" min="1" max="60" class="t-input" style="width:72px;" placeholder="RPM"/>
+            <span style="color:var(--muted);font-size:.78rem;">RPM</span>
+            <button class="gate-btn" style="margin:0;padding:9px 20px;font-size:.8rem;" onclick="motorMove()">Kjør</button>
+          </div>
+        </div>
+
+        <!-- StallGuard + driver-status -->
+        <div class="card" style="padding:20px 22px;">
+          <div class="card-head">Driver-status</div>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:.78rem;color:var(--muted);min-width:100px;">StallGuard</span>
+              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+                <div id="sg-bar" style="height:100%;width:0%;background:var(--accent);transition:width .3s;border-radius:4px;"></div>
+              </div>
+              <span id="sg-val" style="font-size:.78rem;min-width:30px;text-align:right;">—</span>
+            </div>
+            <div style="display:flex;gap:16px;font-size:.78rem;">
+              <span>Temp-advarsel: <span id="m-temp" style="color:var(--green)">OK</span></span>
+              <span>Uptime: <span id="m-uptime" style="color:var(--muted)">—</span></span>
+              <span>Strøm: <span id="m-cur" style="color:var(--muted)">—</span> mA</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- KJØLING PANEL -->
+      <!-- DISPLAY PANEL -->
+      <div class="panel" id="panel-display">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Display — GIF-velger</div>
+            <div class="panel-sub">Velg hvilken GIF som vises på den runde skjermen</div>
+          </div>
+          <div id="disp-badge" style="font-size:.72rem;font-weight:700;padding:5px 12px;border-radius:20px;background:rgba(239,68,68,.12);color:var(--red)">Frakoblet</div>
+        </div>
+
+        <!-- Connection info -->
+        <div class="card" style="padding:14px 18px;display:flex;align-items:center;gap:12px">
+          <div id="disp-dot" style="width:10px;height:10px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:.82rem;font-weight:600" id="disp-status-txt">Venter på ESP32...</div>
+            <div style="font-size:.7rem;color:var(--muted);margin-top:2px" id="disp-last-seen">—</div>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted)" id="disp-active-lbl">Ingen aktiv</div>
+        </div>
+
+        <!-- GIF grid -->
+        <div id="gif-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px"></div>
+
+        <!-- Upload instructions -->
+        <div class="card" style="padding:18px">
+          <div class="card-head" style="border:none;padding:0 0 10px">📁 Slik laster du opp GIF-filer</div>
+          <ol style="font-size:.78rem;color:var(--muted);line-height:1.9;padding-left:18px">
+            <li>Legg GIF-filene i mappen <code style="background:var(--border);padding:1px 5px;border-radius:4px">esp32_display/data/</code></li>
+            <li>Gi dem navnene <code style="background:var(--border);padding:1px 5px;border-radius:4px">gif0.gif</code> → <code style="background:var(--border);padding:1px 5px;border-radius:4px">gif5.gif</code></li>
+            <li>I Arduino IDE: <strong style="color:var(--text)">Sketch → Upload Sketch Data</strong></li>
+            <li>Last deretter opp selve sketchen</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-kjøling">
+        <div class="coming-card">
+          <div class="coming-icon">❄️</div>
+          <div class="coming-title">Kjølingsinnstillinger</div>
+          <div class="coming-txt">Temperatur og kjølestyring kommer snart</div>
+        </div>
+      </div>
+
+      <!-- LOGG PANEL -->
+      <div class="panel" id="panel-logg">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Endringslogg</div>
+            <div class="panel-sub">Siste 20 lagringer fra admin-panelet</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">Historikk</div>
+          <div id="logg-list"><div style="padding:20px;color:var(--muted);font-size:.82rem;">Laster logg…</div></div>
+        </div>
+      </div>
+
+      <!-- STATISTIKK PANEL -->
+      <div class="panel" id="panel-statistikk">
+        <div class="coming-card">
+          <div class="coming-icon">📊</div>
+          <div class="coming-title">Statistikk</div>
+          <div class="coming-txt">Salgsdata og oversikter kommer snart</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- save bar -->
+  <div id="save-bar">
+    <div id="save-status">Ingen endringer</div>
+    <button id="save-btn">Lagre endringer</button>
+  </div>
+
+</div>
+
+<!-- logout confirm -->
+<div id="logout-overlay">
+  <div class="logout-box">
+    <h3>Logg ut?</h3>
+    <p>Ulagrede endringer vil gå tapt</p>
+    <div class="logout-btns">
+      <button class="lb-cancel" id="logout-cancel">Avbryt</button>
+      <button class="lb-confirm" id="logout-confirm">Logg ut</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyDqh-jXM82F7-qB0Ug7PeVmazdlpmpdNXQ",
+  authDomain: "yogurt-f0fa7.firebaseapp.com",
+  databaseURL: "https://yogurt-f0fa7-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "yogurt-f0fa7",
+  storageBucket: "yogurt-f0fa7.firebasestorage.app",
+  messagingSenderId: "551580292785",
+  appId: "1:551580292785:web:9a125688c28dae507af490"
+});
+const db = firebase.database();
+
+const ADMIN_PW = 'Elevbedriftyogurt1';
+const DEFAULT = {
+  flavors: [
+    { emoji:'🍦', name:'Classic Vanilla',  badge:'Kremet',   pris:'25 kr', desc:'En klassisk favoritt med ekte vaniljesmak og silkemyk tekstur.', available:true,  g1:'#FEF9C3', g2:'#F5D06B', tc:'#3B2208', tc2:'#A06020' },
+    { emoji:'🥭', name:'Mango Delight',    badge:'Fruktig',  pris:'25 kr', desc:'Søt og saftig mango fra solrike troper, blandet til perfeksjon.',  available:true,  g1:'#FFEDD5', g2:'#FB923C', tc:'#5C1A08', tc2:'#B04020' },
+    { emoji:'🍫', name:'Chocolate Deluxe', badge:'Intens',   pris:'25 kr', desc:'Mørk belgisk sjokolade møter kremete yogurt for ultimate nytelse.',available:false, g1:'#3D1409', g2:'#0A0200', tc:'#FEF3C7', tc2:'#D4A870' },
+    { emoji:'🫙', name:'Greek Yogurt',     badge:'Naturlig', pris:'25 kr', desc:'Naturlig gresk yogurt – frisk, syrlig og full av protein.',        available:true,  g1:'#F8FAFC', g2:'#CBD5E1', tc:'#1E293B', tc2:'#475569' },
+    { emoji:'🌴', name:'Tropical Freeze',  badge:'Eksotisk', pris:'25 kr', desc:'En eksplosjon av tropiske frukter – ananas, kokos og lime.',        available:false, g1:'#CCFBF1', g2:'#0F9488', tc:'#042F2E', tc2:'#1A7A70' },
+    { emoji:'🫐', name:'Forest Berry',     badge:'Vill',     pris:'25 kr', desc:'Blåbær, bringebær og jordbær fra norske skoger og enger.',         available:true,  g1:'#4C1D95', g2:'#1E0938', tc:'#EDE9FE', tc2:'#C4B0F0' },
+  ],
+  times: [
+    { day:'Mandag',  dayNum:1, time:'11:15 – 12:00', closed:true  },
+    { day:'Tirsdag', dayNum:2, time:'11:15 – 12:00', closed:true  },
+    { day:'Onsdag',  dayNum:3, time:'11:15 – 12:00', closed:true  },
+    { day:'Torsdag', dayNum:4, time:'Stengt',         closed:true  },
+    { day:'Fredag',  dayNum:5, time:'10:30 – 11:00', closed:false },
+  ]
+};
+
+function saveData(d) { db.ref('yogurt-data').set(d); }
+
+let flavors = DEFAULT.flavors;
+let times   = DEFAULT.times;
+let dirty = false;
+
+// Load from Firebase on startup
+db.ref('yogurt-data').once('value', snap => {
+  const d = snap.val();
+  if (d && d.flavors && d.times) {
+    d.flavors.forEach((f,i) => { if(!f.tc2) f.tc2 = DEFAULT.flavors[i]?.tc2||f.tc; });
+    flavors = d.flavors;
+    times   = d.times;
+  } else {
+    // First time — write defaults to Firebase
+    saveData(DEFAULT);
+  }
+});
+
+/* ── Login ── */
+const gate   = document.getElementById('gate');
+const app    = document.getElementById('app');
+const pwInput = document.getElementById('pw');
+const pwErr   = document.getElementById('pw-err');
+
+function tryLogin() {
+  if (pwInput.value === ADMIN_PW) {
+    gate.classList.add('hidden');
+    app.classList.add('visible');
+    db.ref('yogurt-data').once('value', snap => {
+      const d = snap.val();
+      if (d && d.flavors && d.times) {
+        d.flavors.forEach((f,i) => { if(!f.tc2) f.tc2 = DEFAULT.flavors[i]?.tc2||f.tc; });
+        flavors = d.flavors; times = d.times;
+      }
+      renderAll();
+    });
+  } else {
+    pwErr.textContent = 'Feil passord — prøv igjen';
+    pwInput.value = '';
+    pwInput.focus();
+    pwInput.style.borderColor = 'var(--red)';
+    setTimeout(() => pwInput.style.borderColor = '', 1200);
+  }
+}
+document.getElementById('pw-btn').addEventListener('click', tryLogin);
+pwInput.addEventListener('keydown', e => { if (e.key==='Enter') tryLogin(); });
+
+/* ── Sidebar navigation ── */
+document.querySelectorAll('.side-btn[data-panel]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    const panelId = 'panel-' + btn.dataset.panel;
+    document.getElementById(panelId).classList.add('active');
+    if (btn.dataset.panel === 'logg') loadLogg();
+  });
+});
+
+/* ── Dirty tracking ── */
+function markDirty() {
+  dirty = true;
+  const s = document.getElementById('save-status');
+  s.textContent = 'Ulagrede endringer';
+  s.className = '';
+}
+
+/* ── Render all ── */
+function renderAll() {
+  renderDashboard();
+  renderFlavors();
+  renderTimes();
+}
+
+/* ── Dashboard (Hjem) ── */
+const today = new Date().getDay();
+const dayNames = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+const monthNames = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+
+function renderDashboard() {
+  const now = new Date();
+  document.getElementById('dash-date').textContent =
+    `${dayNames[now.getDay()]} ${now.getDate()}. ${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+
+  const avail = flavors.filter(f=>f.available).length;
+  document.getElementById('stat-avail').innerHTML = `
+    <div class="stat-label">Tilgjengelige smaker</div>
+    <div class="stat-value">${avail} <span style="font-size:1rem;font-weight:400;color:var(--muted)">/ ${flavors.length}</span></div>
+    <div class="stat-sub">${avail===0?'Ingen tilgjengelig i dag':avail===flavors.length?'Alle smaker tilgjengelig':'Noen smaker skrudd av'}</div>`;
+
+  const todayTime = times.find(t=>t.dayNum===today);
+  const isOpen = todayTime && !todayTime.closed;
+  const timeBox = document.getElementById('stat-time');
+  timeBox.className = 'stat-box ' + (isOpen ? 'open' : 'closed-today');
+  timeBox.innerHTML = `
+    <div class="stat-label">Salg i dag</div>
+    <div class="stat-value" style="color:${isOpen?'var(--green)':'var(--red)'}">${isOpen?'Åpent':'Stengt'}</div>
+    <div class="stat-sub">${isOpen?todayTime.time:'Ingen salg planlagt'}</div>`;
+
+  // Quick toggles
+  const qel = document.getElementById('quick-flavor-list'); qel.innerHTML = '';
+  flavors.forEach((f, i) => {
+    const row = document.createElement('div'); row.className = 'f-row';
+    row.innerHTML = `
+      <span class="f-emoji">${f.emoji}</span>
+      <div style="flex:1"><div class="f-name">${f.name}</div></div>
+      <div class="toggle-wrap">
+        <span class="toggle-label ${f.available?'on':'off'}">${f.available?'Tilgjengelig':'Utilgjengelig'}</span>
+        <button class="toggle ${f.available?'on':''}" data-qi="${i}"></button>
+      </div>`;
+    row.querySelector('.toggle').addEventListener('click', () => {
+      flavors[i].available = !flavors[i].available;
+      saveData({flavors, times});
+      renderDashboard(); renderFlavors();
+      pushLogg(`${f.emoji} ${f.name} → ${flavors[i].available?'Tilgjengelig':'Utilgjengelig'}`);
+    });
+    qel.appendChild(row);
+  });
+}
+
+/* ── Render flavors (with preview + editable drawer) ── */
+let previewIdx = 0;
+function renderFlavors() {
+  const el = document.getElementById('flavor-list'); el.innerHTML = '';
+  flavors.forEach((f, i) => {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `
+      <div class="f-row" style="cursor:pointer;" data-fi="${i}">
+        <span class="f-emoji">${f.emoji}</span>
+        <div style="flex:1">
+          <div class="f-name">${f.name}</div>
+          <div class="f-badge">${f.badge}${f.pris?' · '+f.pris:''}</div>
+        </div>
+        <div class="toggle-wrap">
+          <span class="toggle-label ${f.available?'on':'off'}">${f.available?'På':'Av'}</span>
+          <button class="toggle ${f.available?'on':''}" data-i="${i}"></button>
+        </div>
+        <button class="f-edit-btn" style="margin-left:10px;">Rediger</button>
+      </div>
+      <div class="f-drawer" id="drawer-${i}">
+        <div><label>Beskrivelse</label><textarea data-desc="${i}">${f.desc||''}</textarea></div>
+        <div><label>Pris (f.eks. 25 kr)</label><input data-pris="${i}" value="${f.pris||''}" placeholder="f.eks. 25 kr"/></div>
+      </div>`;
+
+    // Toggle available
+    wrap.querySelector('.toggle').addEventListener('click', e => {
+      e.stopPropagation();
+      flavors[i].available = !flavors[i].available;
+      markDirty(); renderFlavors(); renderDashboard();
+    });
+    // Edit button = toggle drawer
+    wrap.querySelector('.f-edit-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      const d = document.getElementById('drawer-'+i);
+      d.classList.toggle('open');
+    });
+    // Click row = show preview
+    wrap.querySelector('.f-row').addEventListener('click', () => {
+      previewIdx = i; updatePreview();
+    });
+    // Desc/pris changes
+    wrap.querySelector(`[data-desc="${i}"]`).addEventListener('input', e => {
+      flavors[i].desc = e.target.value; markDirty();
+    });
+    wrap.querySelector(`[data-pris="${i}"]`).addEventListener('input', e => {
+      flavors[i].pris = e.target.value; markDirty();
+    });
+    el.appendChild(wrap);
+  });
+  updatePreview();
+}
+
+function updatePreview() {
+  const f = flavors[previewIdx];
+  const p = document.getElementById('flavor-preview');
+  p.style.background = `linear-gradient(145deg, ${f.g1} 0%, ${f.g2} 100%)`;
+  p.style.color = f.tc;
+  p.innerHTML = `
+    <div class="prev-emoji">${f.emoji}</div>
+    <div class="prev-name" style="color:${f.tc}">${f.name}</div>
+    <div class="prev-desc" style="color:${f.tc2}">${f.desc||''}</div>
+    <div class="prev-badge" style="color:${f.tc};border:1px solid ${f.tc2}">${f.badge}</div>
+    ${f.pris?`<div style="font-size:.7rem;color:${f.tc2}">${f.pris}</div>`:''}
+    <div style="margin-top:4px;font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:100px;background:${f.available?'#16a34a':'#dc2626'};color:#fff">${f.available?'Tilgjengelig':'Utilgjengelig'}</div>`;
+}
+
+/* ── Render times ── */
+function renderTimes() {
+  const el = document.getElementById('time-list'); el.innerHTML = '';
+  times.forEach((t, i) => {
+    const row = document.createElement('div'); row.className = 't-row';
+    row.innerHTML = `
+      <span class="t-day ${t.dayNum===today?'today':''}">${t.day}${t.dayNum===today?' ·':''}</span>
+      <input class="t-input" value="${t.closed?'':t.time}" ${t.closed?'disabled':''} placeholder="f.eks. 11:15 – 12:00"/>
+      <button class="t-closed-btn ${t.closed?'closed':''}">${t.closed?'Stengt':'Åpen'}</button>`;
+    const inp = row.querySelector('.t-input');
+    const btn = row.querySelector('.t-closed-btn');
+    inp.addEventListener('input', () => markDirty());
+    btn.addEventListener('click', () => {
+      const isClosed = !btn.classList.contains('closed');
+      btn.classList.toggle('closed', isClosed);
+      btn.textContent = isClosed ? 'Stengt' : 'Åpen';
+      inp.disabled = isClosed;
+      if (isClosed) inp.value = '';
+      markDirty();
+    });
+    el.appendChild(row);
+  });
+}
+
+/* ── Save ── */
+function doSave() {
+  // Collect time changes and build log message
+  const changes = [];
+  document.querySelectorAll('#time-list .t-row').forEach((row, i) => {
+    const inp = row.querySelector('.t-input');
+    const closed = row.querySelector('.t-closed-btn').classList.contains('closed');
+    const oldTime = times[i].time; const oldClosed = times[i].closed;
+    times[i].closed = closed;
+    times[i].time   = closed ? 'Stengt' : inp.value;
+    if (times[i].time !== oldTime || times[i].closed !== oldClosed)
+      changes.push(`${times[i].day}: ${times[i].time}`);
+  });
+  flavors.forEach(f => { if(f.pris===undefined) f.pris=''; });
+  saveData({ flavors, times });
+  pushLogg(changes.length ? 'Tider oppdatert: ' + changes.join(', ') : 'Innstillinger lagret');
+  dirty = false;
+  const s = document.getElementById('save-status');
+  s.textContent = '✓ Lagret';
+  s.className = 'saved';
+  setTimeout(() => { s.textContent = 'Ingen endringer'; s.className = ''; }, 3000);
+}
+document.getElementById('save-btn').addEventListener('click', doSave);
+document.getElementById('save-btn-top').addEventListener('click', doSave);
+
+/* ── Logg ── */
+function pushLogg(msg) {
+  db.ref('yogurt-log').push({ ts: Date.now(), msg });
+}
+function loadLogg() {
+  const el = document.getElementById('logg-list');
+  el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:.82rem;">Laster…</div>';
+  db.ref('yogurt-log').limitToLast(20).once('value', snap => {
+    el.innerHTML = '';
+    const entries = [];
+    snap.forEach(c => entries.unshift(c.val()));
+    if (!entries.length) { el.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:.82rem;">Ingen logg ennå</div>'; return; }
+    entries.forEach(e => {
+      const d = new Date(e.ts);
+      const ts = `${d.toLocaleDateString('no-NO')} ${d.toLocaleTimeString('no-NO',{hour:'2-digit',minute:'2-digit'})}`;
+      const row = document.createElement('div'); row.className = 'logg-row';
+      row.innerHTML = `<span class="logg-time">${ts}</span><span class="logg-msg">${e.msg}</span>`;
+      el.appendChild(row);
+    });
+  });
+}
+
+/* ── Display GIF-velger (Firebase-bro) ── */
+const dispRef       = db.ref('yogurt-display');
+const dispCmdRef    = db.ref('yogurt-display/current');
+const dispStatusRef = db.ref('yogurt-display/status');
+
+const GIF_LABELS = [
+  { emoji:'🍦', name:'Yogurt spinning' },
+  { emoji:'✨', name:'Sparkle' },
+  { emoji:'🌈', name:'Rainbow' },
+  { emoji:'❄️', name:'Frysing' },
+  { emoji:'🎉', name:'Feiring' },
+  { emoji:'💜', name:'YoGurt logo' },
+];
+
+let activeGif = null;
+
+function renderGifGrid() {
+  const grid = document.getElementById('gif-grid');
+  grid.innerHTML = GIF_LABELS.map((g, i) => `
+    <div class="gif-card ${activeGif === 'gif'+i ? 'gif-active' : ''}" onclick="selectGif(${i})" id="gif-card-${i}">
+      <div class="gif-num">gif${i}.gif</div>
+      <div class="gif-emoji">${g.emoji}</div>
+      <div class="gif-name">${g.name}</div>
+      <div class="gif-send ${activeGif === 'gif'+i ? 'gif-send-active' : ''}">
+        ${activeGif === 'gif'+i ? '▶ Spiller nå' : 'Vis denne'}
+      </div>
+    </div>`).join('');
+}
+
+function selectGif(i) {
+  activeGif = 'gif' + i;
+  dispCmdRef.set({ file: 'gif'+i+'.gif', ts: Date.now() });
+  renderGifGrid();
+}
+
+// Lytt på status fra ESP32
+dispStatusRef.on('value', snap => {
+  const s = snap.val();
+  const dot   = document.getElementById('disp-dot');
+  const badge = document.getElementById('disp-badge');
+  const txt   = document.getElementById('disp-status-txt');
+  const seen  = document.getElementById('disp-last-seen');
+  const lbl   = document.getElementById('disp-active-lbl');
+  if (!dot) return;
+
+  if (s && s.lastSeen) {
+    const age = Date.now() - s.lastSeen;
+    const online = age < 5000;
+    dot.style.background   = online ? 'var(--green)' : 'var(--red)';
+    badge.style.background = online ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)';
+    badge.style.color      = online ? 'var(--green)' : 'var(--red)';
+    badge.textContent      = online ? 'Tilkoblet' : 'Frakoblet';
+    txt.textContent        = online ? 'ESP32 display er tilkoblet' : 'ESP32 display er frakoblet';
+    seen.textContent       = 'Sist sett: ' + new Date(s.lastSeen).toLocaleTimeString('no');
+    if (s.current) {
+      const idx = parseInt(s.current.replace('gif','').replace('.gif',''));
+      lbl.textContent = 'Spiller: ' + (GIF_LABELS[idx]?.name || s.current);
+      if (activeGif !== 'gif'+idx) { activeGif = 'gif'+idx; renderGifGrid(); }
+    }
+  }
+});
+
+renderGifGrid();
+
+/* ── Maskinstyring (Firebase-bro) ── */
+const motorRef  = db.ref('yogurt-maskin');
+const cmdRef    = db.ref('yogurt-maskin/cmd');
+const statusRef = db.ref('yogurt-maskin/status');
+let motorRunning = false;
+let motorDir = 'left';
+let connCheckTimer = null;
+
+// Listen for status updates from ESP32
+statusRef.on('value', snap => {
+  const s = snap.val();
+  if (!s) return;
+  const age = Date.now() - (s.lastSeen || 0);
+  const online = age < 3000;
+  const badge = document.getElementById('motor-conn');
+  if (badge) {
+    badge.textContent = online ? '● Tilkoblet' : '● Frakoblet';
+    badge.className = 'motor-conn-badge ' + (online ? 'online' : 'offline');
+  }
+  motorRunning = !!s.running;
+  const btn = document.getElementById('motor-startstop');
+  if (btn) {
+    btn.textContent = motorRunning ? '⏹ STOPP' : '▶ START';
+    btn.className = 'motor-start-btn' + (motorRunning ? ' running' : '');
+  }
+  if (document.getElementById('m-rpm'))   document.getElementById('m-rpm').textContent   = s.rpm ?? '—';
+  if (document.getElementById('m-sps'))   document.getElementById('m-sps').textContent   = s.stepsPerSec ? Math.round(s.stepsPerSec) : '—';
+  if (document.getElementById('m-rev'))   document.getElementById('m-rev').textContent   = s.revolutions ? s.revolutions.toFixed(1) : '—';
+  if (document.getElementById('m-rssi'))  document.getElementById('m-rssi').textContent  = s.wifiRSSI ? s.wifiRSSI + ' dBm' : '—';
+  if (document.getElementById('m-cur'))   document.getElementById('m-cur').textContent   = s.current_mA ?? '—';
+  if (document.getElementById('m-uptime')) {
+    const u = s.uptime_s || 0;
+    document.getElementById('m-uptime').textContent = u < 60 ? u+'s' : Math.floor(u/60)+'m '+( u%60)+'s';
+  }
+  if (document.getElementById('m-temp')) {
+    const el = document.getElementById('m-temp');
+    el.textContent = s.driverTemp_warning ? '⚠ ADVARSEL' : 'OK';
+    el.style.color = s.driverTemp_warning ? 'var(--red)' : 'var(--green)';
+  }
+  const sg = s.stallGuard ?? 0;
+  if (document.getElementById('sg-bar'))  document.getElementById('sg-bar').style.width = Math.min(100, (sg/255)*100) + '%';
+  if (document.getElementById('sg-val'))  document.getElementById('sg-val').textContent  = sg;
+
+  // Sync direction buttons
+  if (s.direction && s.direction !== motorDir) {
+    motorDir = s.direction;
+    document.getElementById('dir-left')?.classList.toggle('active', motorDir==='left');
+    document.getElementById('dir-right')?.classList.toggle('active', motorDir==='right');
+  }
+});
+
+function sendCmd(obj) {
+  cmdRef.set({ ...obj, ts: Date.now() });
+}
+
+function motorStartStop() {
+  sendCmd(motorRunning
+    ? { action: 'stop' }
+    : { action: 'start', rpm: parseInt(document.getElementById('rpm-slider').value), direction: motorDir }
+  );
+}
+
+function setDirection(dir) {
+  motorDir = dir;
+  document.getElementById('dir-left')?.classList.toggle('active', dir==='left');
+  document.getElementById('dir-right')?.classList.toggle('active', dir==='right');
+  sendCmd({ action: 'setDirection', direction: dir });
+}
+
+function rpmSliderChange(val) {
+  val = Math.max(1, Math.min(60, parseInt(val)||1));
+  document.getElementById('rpm-slider').value = val;
+  document.getElementById('rpm-num').value    = val;
+  if (motorRunning) sendCmd({ action: 'setRPM', rpm: val });
+}
+
+function curSliderChange(val) {
+  val = Math.max(200, Math.min(1500, parseInt(val)||800));
+  document.getElementById('cur-slider').value = val;
+  document.getElementById('cur-num').value    = val;
+  const warn = document.getElementById('cur-warn');
+  if (warn) warn.style.display = val > 1200 ? 'block' : 'none';
+  sendCmd({ action: 'setCurrent', mA: val });
+}
+
+function motorMove() {
+  const revs = parseFloat(document.getElementById('rev-num').value) || 1;
+  const rpm  = parseInt(document.getElementById('rev-rpm').value)   || 13;
+  sendCmd({ action: 'move', revolutions: revs, rpm });
+}
+
+/* ── Logout ── */
+const logoutOverlay = document.getElementById('logout-overlay');
+document.getElementById('logout-btn').addEventListener('click', () => logoutOverlay.classList.add('open'));
+document.getElementById('logout-cancel').addEventListener('click', () => logoutOverlay.classList.remove('open'));
+document.getElementById('logout-confirm').addEventListener('click', () => {
+  logoutOverlay.classList.remove('open');
+  app.classList.remove('visible');
+  gate.classList.remove('hidden');
+  pwInput.value = ''; pwErr.textContent = '';
+});
+</script>
+</body>
+</html>
